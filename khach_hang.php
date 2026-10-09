@@ -18,23 +18,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!preg_match('/^[0-9]{9,15}$/', $sdt)) throw new Exception('Số điện thoại chỉ gồm 9 đến 15 chữ số.');
 
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `Khách hàng` WHERE `SĐT` = ?");
+            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `khách hàng` WHERE `SĐT` = ?");
             $st->bind_param('s', $sdt);
             $st->execute();
             if ((int)$st->get_result()->fetch_assoc()['c'] > 0) throw new Exception('Số điện thoại này đã có khách hàng.');
-            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `Tài khoản` WHERE `Tên đăng nhập` = ?");
+            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `tài khoản` WHERE `Tên đăng nhập` = ?");
             $st->bind_param('s', $user);
             $st->execute();
             if ((int)$st->get_result()->fetch_assoc()['c'] > 0) throw new Exception('Tên đăng nhập đã tồn tại.');
 
-            $hang = (int)$conn->query("SELECT `ID Hạng` AS id FROM `Hạng thành viên` ORDER BY `Tổng nạp tối thiểu` ASC LIMIT 1")->fetch_assoc()['id'];
-            $st = $conn->prepare("INSERT INTO `Khách hàng` (`Họ và tên`, `SĐT`, `Hạng thành viên_ID Hạng`) VALUES (?, ?, ?)");
+            $hang = (int)$conn->query("SELECT `ID Hạng` AS id FROM `hạng thành viên` ORDER BY `Tổng nạp tối thiểu` ASC LIMIT 1")->fetch_assoc()['id'];
+            $st = $conn->prepare("INSERT INTO `khách hàng` (`Họ và tên`, `SĐT`, `Hạng thành viên_ID Hạng`) VALUES (?, ?, ?)");
             $st->bind_param('ssi', $ten, $sdt, $hang);
             $st->execute();
             $kid = (int)$conn->insert_id;
 
             $hash = password_hash($mk, PASSWORD_DEFAULT);
-            $st = $conn->prepare("INSERT INTO `Tài khoản` (`Tên đăng nhập`, `Mật khẩu`, `Ngày đăng kí`, `Trạng thái`, `Số dư còn lại`, `Khách hàng_ID Khách hàng`) VALUES (?, ?, NOW(), 'Hoạt động', 0, ?)");
+            $st = $conn->prepare("INSERT INTO `tài khoản` (`Tên đăng nhập`, `Mật khẩu`, `Ngày đăng kí`, `Trạng thái`, `Số dư còn lại`, `Khách hàng_ID Khách hàng`) VALUES (?, ?, NOW(), 'Hoạt động', 0, ?)");
             $st->bind_param('ssi', $user, $hash, $kid);
             $st->execute();
             $tid = (int)$conn->insert_id;
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($sotien < 1000 || $sotien > 10000000) throw new Exception('Số tiền nạp phải từ 1.000đ đến 10.000.000đ.');
 
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT `Số dư còn lại` AS so_du, `Trạng thái` AS tt, `Khách hàng_ID Khách hàng` AS kid FROM `Tài khoản` WHERE `ID Tài khoản` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT `Số dư còn lại` AS so_du, `Trạng thái` AS tt, `Khách hàng_ID Khách hàng` AS kid FROM `tài khoản` WHERE `ID Tài khoản` = ? FOR UPDATE");
             $st->bind_param('i', $tid);
             $st->execute();
             $t = $st->get_result()->fetch_assoc();
@@ -56,36 +56,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nv_id = (int)$nv['id'];
             $ca = lay_ca($conn, $nv_id);
             $tien = (float)$sotien;
-            $st = $conn->prepare("INSERT INTO `Giao dịch nạp tiền` (`Thời gian nạp`, `Số tiền nạp`, `Ca làm_ID ca`, `Tài khoản_ID Tài khoản`, `Nhân viên_Mã nhân viên`) VALUES (NOW(), ?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `giao dịch nạp tiền` (`Thời gian nạp`, `Số tiền nạp`, `Ca làm_ID ca`, `Tài khoản_ID Tài khoản`, `Nhân viên_Mã nhân viên`) VALUES (NOW(), ?, ?, ?, ?)");
             $st->bind_param('diii', $tien, $ca, $tid, $nv_id);
             $st->execute();
             $gd = (int)$conn->insert_id;
 
             $moi = (float)$t['so_du'] + $tien;
-            $st = $conn->prepare("UPDATE `Tài khoản` SET `Số dư còn lại` = ? WHERE `ID Tài khoản` = ?");
+            $st = $conn->prepare("UPDATE `tài khoản` SET `Số dư còn lại` = ? WHERE `ID Tài khoản` = ?");
             $st->bind_param('di', $moi, $tid);
             $st->execute();
 
-            $st = $conn->prepare("INSERT INTO `Lịch sử số dư` (`Loại biến động`, `Số tiền`, `Số dư sau`, `Thời gian`, `Mô tả`, `Tài khoản_ID Tài khoản`, `Giao dịch nạp tiền_Mã giao dịch`) VALUES ('Nạp', ?, ?, NOW(), 'Nạp tiền tại quầy', ?, ?)");
+            $st = $conn->prepare("INSERT INTO `lịch sử số dư` (`Loại biến động`, `Số tiền`, `Số dư sau`, `Thời gian`, `Mô tả`, `Tài khoản_ID Tài khoản`, `Giao dịch nạp tiền_Mã giao dịch`) VALUES ('Nạp', ?, ?, NOW(), 'Nạp tiền tại quầy', ?, ?)");
             $st->bind_param('ddii', $tien, $moi, $tid, $gd);
             $st->execute();
 
             // Tự nâng hạng theo tổng tiền đã nạp (chỉ nâng, không hạ)
-            $st = $conn->prepare("SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `Giao dịch nạp tiền` WHERE `Tài khoản_ID Tài khoản` = ?");
+            $st = $conn->prepare("SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `giao dịch nạp tiền` WHERE `Tài khoản_ID Tài khoản` = ?");
             $st->bind_param('i', $tid);
             $st->execute();
             $tong_nap = (float)$st->get_result()->fetch_assoc()['s'];
-            $st = $conn->prepare("SELECT `ID Hạng` AS id, `Tên hạng` AS ten, `Tổng nạp tối thiểu` AS nguong FROM `Hạng thành viên` WHERE `Tổng nạp tối thiểu` <= ? ORDER BY `Tổng nạp tối thiểu` DESC LIMIT 1");
+            $st = $conn->prepare("SELECT `ID Hạng` AS id, `Tên hạng` AS ten, `Tổng nạp tối thiểu` AS nguong FROM `hạng thành viên` WHERE `Tổng nạp tối thiểu` <= ? ORDER BY `Tổng nạp tối thiểu` DESC LIMIT 1");
             $st->bind_param('d', $tong_nap);
             $st->execute();
             $h = $st->get_result()->fetch_assoc();
-            $st = $conn->prepare("SELECT h.`Tổng nạp tối thiểu` AS nguong FROM `Khách hàng` k JOIN `Hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE k.`ID Khách hàng` = ?");
+            $st = $conn->prepare("SELECT h.`Tổng nạp tối thiểu` AS nguong FROM `khách hàng` k JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE k.`ID Khách hàng` = ?");
             $st->bind_param('i', $t['kid']);
             $st->execute();
             $cur = (float)$st->get_result()->fetch_assoc()['nguong'];
             $msg = 'Đã nạp ' . tien($sotien) . '. Số dư mới: ' . tien($moi) . '.';
             if ($h && (float)$h['nguong'] > $cur) {
-                $st = $conn->prepare("UPDATE `Khách hàng` SET `Hạng thành viên_ID Hạng` = ? WHERE `ID Khách hàng` = ?");
+                $st = $conn->prepare("UPDATE `khách hàng` SET `Hạng thành viên_ID Hạng` = ? WHERE `ID Khách hàng` = ?");
                 $st->bind_param('ii', $h['id'], $t['kid']);
                 $st->execute();
                 $msg .= ' Khách được nâng lên hạng ' . $h['ten'] . '.';
@@ -108,7 +108,7 @@ $st = $conn->prepare("SELECT k.`ID Khách hàng` AS kid, k.`Họ và tên` AS te
         t.`ID Tài khoản` AS tid, t.`Tên đăng nhập` AS tk, t.`Trạng thái` AS tt, t.`Số dư còn lại` AS so_du
     FROM `khách hàng` k
     JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng`
-    LEFT JOIN `Tài khoản` t ON t.`Khách hàng_ID Khách hàng` = k.`ID Khách hàng`
+    LEFT JOIN `tài khoản` t ON t.`Khách hàng_ID Khách hàng` = k.`ID Khách hàng`
     WHERE k.`Họ và tên` LIKE ? OR k.`SĐT` LIKE ? OR t.`Tên đăng nhập` LIKE ?
     ORDER BY k.`ID Khách hàng` DESC");
 $st->bind_param('sss', $like, $like, $like);
@@ -121,14 +121,14 @@ foreach ($ds as $r) { if ((int)$r['tid'] === $sel) $chon = $r; }
 $lich_su = [];
 if (!$chon && $sel) {
     $st = $conn->prepare("SELECT k.`Họ và tên` AS ten, k.`SĐT` AS sdt, h.`Tên hạng` AS hang, t.`ID Tài khoản` AS tid, t.`Tên đăng nhập` AS tk, t.`Trạng thái` AS tt, t.`Số dư còn lại` AS so_du
-        FROM `tài khoản` t JOIN `Khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
+        FROM `tài khoản` t JOIN `khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
         JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ?");
     $st->bind_param('i', $sel);
     $st->execute();
     $chon = $st->get_result()->fetch_assoc();
 }
 if ($chon) {
-    $st = $conn->prepare("SELECT `Thời gian nạp` AS tg, `Số tiền nạp` AS st FROM `Giao dịch nạp tiền` WHERE `Tài khoản_ID Tài khoản` = ? ORDER BY `Mã giao dịch` DESC LIMIT 5");
+    $st = $conn->prepare("SELECT `Thời gian nạp` AS tg, `Số tiền nạp` AS st FROM `giao dịch nạp tiền` WHERE `Tài khoản_ID Tài khoản` = ? ORDER BY `Mã giao dịch` DESC LIMIT 5");
     $st->bind_param('i', $chon['tid']);
     $st->execute();
     $lich_su = $st->get_result()->fetch_all(MYSQLI_ASSOC);

@@ -15,23 +15,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($act === 'mo_phien') {
             $tk = (int)($_POST['tk'] ?? 0);
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT m.`Trạng thái` AS tt, k.`Đơn giá` AS gia FROM `Máy tính` m JOIN `Khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT m.`Trạng thái` AS tt, k.`Đơn giá` AS gia FROM `máy tính` m JOIN `khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ? FOR UPDATE");
             $st->bind_param('i', $may_id);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
             if (!$m || $m['tt'] !== 'Offline') throw new Exception('Máy này không sẵn sàng để mở phiên.');
             if ($tk > 0) {
-                $st = $conn->prepare("SELECT COUNT(*) AS c FROM `Phiên sử dụng máy` WHERE `Tài khoản_ID Tài khoản` = ? AND `Thời gian kết thúc` IS NULL");
+                $st = $conn->prepare("SELECT COUNT(*) AS c FROM `phiên sử dụng máy` WHERE `Tài khoản_ID Tài khoản` = ? AND `Thời gian kết thúc` IS NULL");
                 $st->bind_param('i', $tk);
                 $st->execute();
                 if ((int)$st->get_result()->fetch_assoc()['c'] > 0) throw new Exception('Tài khoản này đang chơi ở máy khác.');
             }
             $gia = (float)$m['gia'];
             $tk_val = $tk > 0 ? $tk : null;
-            $st = $conn->prepare("INSERT INTO `Phiên sử dụng máy` (`Thời gian bắt đầu`, `Thời gian kết thúc`, `Thời lượng`, `Đơn giá`, `Tiền sử dụng`, `Tài khoản_ID Tài khoản`, `Máy tính_ID Máy`) VALUES (NOW(), NULL, 0, ?, 0, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `phiên sử dụng máy` (`Thời gian bắt đầu`, `Thời gian kết thúc`, `Thời lượng`, `Đơn giá`, `Tiền sử dụng`, `Tài khoản_ID Tài khoản`, `Máy tính_ID Máy`) VALUES (NOW(), NULL, 0, ?, 0, ?, ?)");
             $st->bind_param('dii', $gia, $tk_val, $may_id);
             $st->execute();
-            $st = $conn->prepare("UPDATE `Máy tính` SET `Trạng thái` = 'Online' WHERE `ID Máy` = ?");
+            $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = 'Online' WHERE `ID Máy` = ?");
             $st->bind_param('i', $may_id);
             $st->execute();
             $conn->commit();
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pt = $_POST['pt'] ?? 'Tiền mặt';
             if (!in_array($pt, ['Tiền mặt', 'QR', 'Thẻ ngân hàng', 'Số dư tài khoản'], true)) throw new Exception('Phương thức thanh toán không hợp lệ.');
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT p.`ID Phiên` AS id, p.`Đơn giá` AS gia, p.`Tài khoản_ID Tài khoản` AS tk, TIMESTAMPDIFF(MINUTE, p.`Thời gian bắt đầu`, NOW()) AS phut FROM `Phiên sử dụng máy` p WHERE p.`Máy tính_ID Máy` = ? AND p.`Thời gian kết thúc` IS NULL LIMIT 1 FOR UPDATE");
+            $st = $conn->prepare("SELECT p.`ID Phiên` AS id, p.`Đơn giá` AS gia, p.`Tài khoản_ID Tài khoản` AS tk, TIMESTAMPDIFF(MINUTE, p.`Thời gian bắt đầu`, NOW()) AS phut FROM `phiên sử dụng máy` p WHERE p.`Máy tính_ID Máy` = ? AND p.`Thời gian kết thúc` IS NULL LIMIT 1 FOR UPDATE");
             $st->bind_param('i', $may_id);
             $st->execute();
             $ph = $st->get_result()->fetch_assoc();
@@ -51,14 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $phut = max(1, (int)$ph['phut']);
             $tien_may = tinh_tien_may($phut, $ph['gia']);
 
-            $st = $conn->prepare("SELECT COALESCE(SUM(`Thành tiền`), 0) AS s FROM `Phiên sử dụng dịch vụ` WHERE `Phiên sử dụng máy_ID Phiên` = ?");
+            $st = $conn->prepare("SELECT COALESCE(SUM(`Thành tiền`), 0) AS s FROM `phiên sử dụng dịch vụ` WHERE `Phiên sử dụng máy_ID Phiên` = ?");
             $st->bind_param('i', $phien);
             $st->execute();
             $dv = (float)$st->get_result()->fetch_assoc()['s'];
 
             $giam = 0; $so_du = 0;
             if ($tk) {
-                $st = $conn->prepare("SELECT t.`Số dư còn lại` AS so_du, h.`Phần trăm giảm giá` AS giam FROM `Tài khoản` t JOIN `Khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng` JOIN `Hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ? FOR UPDATE");
+                $st = $conn->prepare("SELECT t.`Số dư còn lại` AS so_du, h.`Phần trăm giảm giá` AS giam FROM `tài khoản` t JOIN `khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng` JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ? FOR UPDATE");
                 $st->bind_param('i', $tk);
                 $st->execute();
                 $r = $st->get_result()->fetch_assoc();
@@ -72,10 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$tk) throw new Exception('Khách vãng lai không có số dư để trừ.');
                 if ($so_du < $tong) throw new Exception('Số dư không đủ (' . tien($so_du) . ' < ' . tien($tong) . ').');
                 $moi = $so_du - $tong;
-                $st = $conn->prepare("UPDATE `Tài khoản` SET `Số dư còn lại` = ? WHERE `ID Tài khoản` = ?");
+                $st = $conn->prepare("UPDATE `tài khoản` SET `Số dư còn lại` = ? WHERE `ID Tài khoản` = ?");
                 $st->bind_param('di', $moi, $tk);
                 $st->execute();
-                $ls = $conn->prepare("INSERT INTO `Lịch sử số dư` (`Loại biến động`, `Số tiền`, `Số dư sau`, `Thời gian`, `Mô tả`, `Tài khoản_ID Tài khoản`, `Phiên sử dụng máy_ID Phiên`) VALUES (?, ?, ?, NOW(), ?, ?, ?)");
+                $ls = $conn->prepare("INSERT INTO `lịch sử số dư` (`Loại biến động`, `Số tiền`, `Số dư sau`, `Thời gian`, `Mô tả`, `Tài khoản_ID Tài khoản`, `Phiên sử dụng máy_ID Phiên`) VALUES (?, ?, ?, NOW(), ?, ?, ?)");
                 $loai = 'Trừ tiền chơi'; $sotien = -$tm2; $sdsau = $so_du - $tm2; $mota = 'Chơi máy ' . $phut . ' phút';
                 $ls->bind_param('sddsii', $loai, $sotien, $sdsau, $mota, $tk, $phien);
                 $ls->execute();
@@ -85,30 +85,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $st = $conn->prepare("UPDATE `Phiên sử dụng máy` SET `Thời gian kết thúc` = NOW(), `Thời lượng` = ?, `Tiền sử dụng` = ? WHERE `ID Phiên` = ?");
+            $st = $conn->prepare("UPDATE `phiên sử dụng máy` SET `Thời gian kết thúc` = NOW(), `Thời lượng` = ?, `Tiền sử dụng` = ? WHERE `ID Phiên` = ?");
             $st->bind_param('idi', $phut, $tien_may, $phien);
             $st->execute();
 
             $ca = lay_ca($conn, (int)$nv['id']);
             $nv_id = (int)$nv['id'];
-            $st = $conn->prepare("INSERT INTO `Hóa đơn` (`Tiền dịch vụ`, `Tổng hóa đơn`, `Trạng thái`, `Ngày xuất`, `Phương thức thanh toán`, `Ca làm_ID ca`, `Phiên sử dụng máy_ID Phiên`, `Nhân viên_Mã nhân viên`) VALUES (?, ?, 'Đã thanh toán', NOW(), ?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `hóa đơn` (`Tiền dịch vụ`, `Tổng hóa đơn`, `Trạng thái`, `Ngày xuất`, `Phương thức thanh toán`, `Ca làm_ID ca`, `Phiên sử dụng máy_ID Phiên`, `Nhân viên_Mã nhân viên`) VALUES (?, ?, 'Đã thanh toán', NOW(), ?, ?, ?, ?)");
             $st->bind_param('ddsiii', $dv, $tong, $pt, $ca, $phien, $nv_id);
             $st->execute();
 
-            $st = $conn->prepare("UPDATE `Máy tính` SET `Trạng thái` = 'Offline' WHERE `ID Máy` = ?");
+            $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = 'Offline' WHERE `ID Máy` = ?");
             $st->bind_param('i', $may_id);
             $st->execute();
             $conn->commit();
             bao('ok', 'Đã kết thúc phiên và xuất hóa đơn ' . tien($tong) . ' (' . $pt . ').');
 
         } elseif ($act === 'bao_tri') {
-            $st = $conn->prepare("SELECT `Trạng thái` AS tt FROM `Máy tính` WHERE `ID Máy` = ?");
+            $st = $conn->prepare("SELECT `Trạng thái` AS tt FROM `máy tính` WHERE `ID Máy` = ?");
             $st->bind_param('i', $may_id);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
             if (!$m || $m['tt'] === 'Online') throw new Exception('Không thể đổi trạng thái máy đang có người chơi.');
             $moi = $m['tt'] === 'Bảo trì' ? 'Offline' : 'Bảo trì';
-            $st = $conn->prepare("UPDATE `Máy tính` SET `Trạng thái` = ? WHERE `ID Máy` = ?");
+            $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = ? WHERE `ID Máy` = ?");
             $st->bind_param('si', $moi, $may_id);
             $st->execute();
             bao('ok', 'Đã chuyển máy sang trạng thái ' . $moi . '.');
@@ -127,8 +127,8 @@ $ds = $conn->query("SELECT m.`ID Máy` AS id, m.`Tên máy` AS ten, m.`Trạng t
         p.`ID Phiên` AS phien, TIMESTAMPDIFF(MINUTE, p.`Thời gian bắt đầu`, NOW()) AS phut, t.`Tên đăng nhập` AS tk_ten
     FROM `máy tính` m
     JOIN `khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực`
-    LEFT JOIN `Phiên sử dụng máy` p ON p.`Máy tính_ID Máy` = m.`ID Máy` AND p.`Thời gian kết thúc` IS NULL
-    LEFT JOIN `Tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
+    LEFT JOIN `phiên sử dụng máy` p ON p.`Máy tính_ID Máy` = m.`ID Máy` AND p.`Thời gian kết thúc` IS NULL
+    LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
     ORDER BY k.`ID Khu vực`, m.`ID Máy`")->fetch_all(MYSQLI_ASSOC);
 
 $nhom = []; $online = 0; $chon = null;
@@ -140,21 +140,21 @@ foreach ($ds as $m) {
     if ($m['tt'] === 'Online') $online++;
     if ((int)$m['id'] === $sel) $chon = $m;
 }
-$doanh_thu = $conn->query("SELECT COALESCE(SUM(`Tổng hóa đơn`), 0) AS s FROM `Hóa đơn` WHERE DATE(`Ngày xuất`) = CURDATE() AND `Trạng thái` = 'Đã thanh toán'")->fetch_assoc()['s'];
-$chua_tt = $conn->query("SELECT COUNT(*) AS c FROM `Hóa đơn` WHERE `Trạng thái` = 'Chưa thanh toán'")->fetch_assoc()['c'];
+$doanh_thu = $conn->query("SELECT COALESCE(SUM(`Tổng hóa đơn`), 0) AS s FROM `hóa đơn` WHERE DATE(`Ngày xuất`) = CURDATE() AND `Trạng thái` = 'Đã thanh toán'")->fetch_assoc()['s'];
+$chua_tt = $conn->query("SELECT COUNT(*) AS c FROM `hóa đơn` WHERE `Trạng thái` = 'Chưa thanh toán'")->fetch_assoc()['c'];
 
 $ct = null; $dv_ds = []; $tong_tam = 0; $dv_tong = 0; $tien_may = 0;
 if ($chon && $chon['phien']) {
     $st = $conn->prepare("SELECT p.`Thời gian bắt đầu` AS bd, t.`Tên đăng nhập` AS tk, t.`Số dư còn lại` AS so_du, h.`Tên hạng` AS hang, h.`Phần trăm giảm giá` AS giam
         FROM `phiên sử dụng máy` p
-        LEFT JOIN `Tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
-        LEFT JOIN `Khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
-        LEFT JOIN `Hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng`
+        LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
+        LEFT JOIN `khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
+        LEFT JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng`
         WHERE p.`ID Phiên` = ?");
     $st->bind_param('i', $chon['phien']);
     $st->execute();
     $ct = $st->get_result()->fetch_assoc();
-    $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `Phiên sử dụng dịch vụ` s JOIN `Dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ?");
+    $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ?");
     $st->bind_param('i', $chon['phien']);
     $st->execute();
     $dv_ds = $st->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -165,8 +165,8 @@ if ($chon && $chon['phien']) {
 
 $tk_ds = [];
 if ($chon && $chon['tt'] === 'Offline') {
-    $tk_ds = $conn->query("SELECT `ID Tài khoản` AS id, `Tên đăng nhập` AS ten, `Số dư còn lại` AS so_du FROM `Tài khoản`
-        WHERE `Trạng thái` = 'Hoạt động' AND `ID Tài khoản` NOT IN (SELECT `Tài khoản_ID Tài khoản` FROM `Phiên sử dụng máy` WHERE `Thời gian kết thúc` IS NULL AND `Tài khoản_ID Tài khoản` IS NOT NULL)
+    $tk_ds = $conn->query("SELECT `ID Tài khoản` AS id, `Tên đăng nhập` AS ten, `Số dư còn lại` AS so_du FROM `tài khoản`
+        WHERE `Trạng thái` = 'Hoạt động' AND `ID Tài khoản` NOT IN (SELECT `Tài khoản_ID Tài khoản` FROM `phiên sử dụng máy` WHERE `Thời gian kết thúc` IS NULL AND `Tài khoản_ID Tài khoản` IS NOT NULL)
         ORDER BY `Tên đăng nhập`")->fetch_all(MYSQLI_ASSOC);
 }
 

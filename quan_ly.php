@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ten = trim($_POST['ten'] ?? ''); $loai = trim($_POST['loai'] ?? '');
             $gia = (float)($_POST['gia'] ?? 0); $ton = (int)($_POST['ton'] ?? 0);
             if ($ten === '' || $loai === '' || $gia <= 0 || $ton < 0) throw new Exception('Nhập đủ tên, loại, đơn giá lớn hơn 0 và tồn kho từ 0 trở lên.');
-            $st = $conn->prepare("INSERT INTO `Dịch vụ` (`Tên dịch vụ`, `Loại`, `Đơn giá`, `Số lượng tồn`) VALUES (?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `dịch vụ` (`Tên dịch vụ`, `Loại`, `Đơn giá`, `Số lượng tồn`) VALUES (?, ?, ?, ?)");
             $st->bind_param('ssdi', $ten, $loai, $gia, $ton);
             $st->execute();
             bao('ok', 'Đã thêm món ' . $ten . '.');
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($act === 'dv_sua') {
             $id = (int)($_POST['id'] ?? 0); $gia = (float)($_POST['gia'] ?? 0); $them = (int)($_POST['them'] ?? 0);
             if ($gia <= 0 || $them < 0 || $them > 100000) throw new Exception('Đơn giá phải lớn hơn 0 và số nhập thêm từ 0 đến 100.000.');
-            $st = $conn->prepare("UPDATE `Dịch vụ` SET `Đơn giá` = ?, `Số lượng tồn` = `Số lượng tồn` + ? WHERE `Mã dịch vụ` = ?");
+            $st = $conn->prepare("UPDATE `dịch vụ` SET `Đơn giá` = ?, `Số lượng tồn` = `Số lượng tồn` + ? WHERE `Mã dịch vụ` = ?");
             $st->bind_param('dii', $gia, $them, $id);
             $st->execute();
             bao('ok', 'Đã cập nhật món.');
@@ -31,11 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($act === 'may_them') {
             $ten = trim($_POST['ten'] ?? ''); $ch = trim($_POST['cauhinh'] ?? ''); $kv = (int)($_POST['kv'] ?? 0);
             if ($ten === '' || $ch === '' || $kv < 1) throw new Exception('Nhập đủ tên máy, cấu hình và chọn khu vực.');
-            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `Máy tính` WHERE `Tên máy` = ?");
+            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `máy tính` WHERE `Tên máy` = ?");
             $st->bind_param('s', $ten);
             $st->execute();
             if ((int)$st->get_result()->fetch_assoc()['c'] > 0) throw new Exception('Tên máy này đã tồn tại.');
-            $st = $conn->prepare("INSERT INTO `Máy tính` (`Tên máy`, `Cấu hình`, `Trạng thái`, `Khu vực_ID Khu vực`) VALUES (?, ?, 'Offline', ?)");
+            $st = $conn->prepare("INSERT INTO `máy tính` (`Tên máy`, `Cấu hình`, `Trạng thái`, `Khu vực_ID Khu vực`) VALUES (?, ?, 'Offline', ?)");
             $st->bind_param('ssi', $ten, $ch, $kv);
             $st->execute();
             bao('ok', 'Đã thêm máy ' . $ten . '.');
@@ -43,13 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($act === 'may_sua') {
             $id = (int)($_POST['id'] ?? 0); $ch = trim($_POST['cauhinh'] ?? ''); $kv = (int)($_POST['kv'] ?? 0);
             if ($ch === '' || $kv < 1) throw new Exception('Cấu hình và khu vực không được để trống.');
-            $st = $conn->prepare("SELECT `Trạng thái` AS tt FROM `Máy tính` WHERE `ID Máy` = ?");
+            $st = $conn->prepare("SELECT `Trạng thái` AS tt FROM `máy tính` WHERE `ID Máy` = ?");
             $st->bind_param('i', $id);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
             if (!$m) throw new Exception('Không tìm thấy máy.');
             if ($m['tt'] === 'Online') throw new Exception('Không sửa được máy đang có người chơi.');
-            $st = $conn->prepare("UPDATE `Máy tính` SET `Cấu hình` = ?, `Khu vực_ID Khu vực` = ? WHERE `ID Máy` = ?");
+            $st = $conn->prepare("UPDATE `máy tính` SET `Cấu hình` = ?, `Khu vực_ID Khu vực` = ? WHERE `ID Máy` = ?");
             $st->bind_param('sii', $ch, $kv, $id);
             $st->execute();
             bao('ok', 'Đã cập nhật máy.');
@@ -61,12 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!preg_match('/^[0-9]{9,10}$/', $sdt)) throw new Exception('Số điện thoại nhân viên gồm 9 hoặc 10 chữ số.');
             if (strlen($mk) < 6) throw new Exception('Mật khẩu phải có ít nhất 6 ký tự.');
             if (!in_array($vt, $VAITRO, true)) throw new Exception('Vai trò không hợp lệ.');
-            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `Nhân viên` WHERE `Tên đăng nhập` = ?");
+            $st = $conn->prepare("SELECT COUNT(*) AS c FROM `nhân viên` WHERE `Tên đăng nhập` = ?");
             $st->bind_param('s', $user);
             $st->execute();
             if ((int)$st->get_result()->fetch_assoc()['c'] > 0) throw new Exception('Tên đăng nhập đã tồn tại.');
             $hash = password_hash($mk, PASSWORD_DEFAULT);
-            $st = $conn->prepare("INSERT INTO `Nhân viên` (`Họ và tên`, `SĐT`, `Tên đăng nhập`, `Mật khẩu`, `Vai trò`) VALUES (?, ?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `nhân viên` (`Họ và tên`, `SĐT`, `Tên đăng nhập`, `Mật khẩu`, `Vai trò`) VALUES (?, ?, ?, ?, ?)");
             $st->bind_param('sssss', $ten, $sdt, $user, $hash, $vt);
             $st->execute();
             bao('ok', 'Đã thêm nhân viên ' . $ten . '.');
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0); $vt = $_POST['vt'] ?? '';
             if ($id === (int)$nv['id']) throw new Exception('Không thể đổi vai trò của chính mình.');
             if (!in_array($vt, $VAITRO, true)) throw new Exception('Vai trò không hợp lệ.');
-            $st = $conn->prepare("UPDATE `Nhân viên` SET `Vai trò` = ? WHERE `Mã nhân viên` = ?");
+            $st = $conn->prepare("UPDATE `nhân viên` SET `Vai trò` = ? WHERE `Mã nhân viên` = ?");
             $st->bind_param('si', $vt, $id);
             $st->execute();
             bao('ok', 'Đã đổi vai trò.');
@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0); $mk = $_POST['mk'] ?? '';
             if (strlen($mk) < 6) throw new Exception('Mật khẩu mới phải có ít nhất 6 ký tự.');
             $hash = password_hash($mk, PASSWORD_DEFAULT);
-            $st = $conn->prepare("UPDATE `Nhân viên` SET `Mật khẩu` = ? WHERE `Mã nhân viên` = ?");
+            $st = $conn->prepare("UPDATE `nhân viên` SET `Mật khẩu` = ? WHERE `Mã nhân viên` = ?");
             $st->bind_param('si', $hash, $id);
             $st->execute();
             bao('ok', 'Đã đặt lại mật khẩu.');
@@ -99,14 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (!in_array($muc, ['dich_vu', 'may', 'nhan_vien'], true)) $muc = 'dich_vu';
 
 /* ---------- Lấy dữ liệu ---------- */
-$kv_ds = $conn->query("SELECT `ID Khu vực` AS id, `Vị trí` AS vitri, `Mô tả` AS mota FROM `Khu vực` ORDER BY `ID Khu vực`")->fetch_all(MYSQLI_ASSOC);
+$kv_ds = $conn->query("SELECT `ID Khu vực` AS id, `Vị trí` AS vitri, `Mô tả` AS mota FROM `khu vực` ORDER BY `ID Khu vực`")->fetch_all(MYSQLI_ASSOC);
 $dv_ds = $may_ds = $nv_ds = [];
 if ($muc === 'dich_vu') {
-    $dv_ds = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `Dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
+    $dv_ds = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
 } elseif ($muc === 'may') {
-    $may_ds = $conn->query("SELECT `ID Máy` AS id, `Tên máy` AS ten, `Cấu hình` AS ch, `Trạng thái` AS tt, `Khu vực_ID Khu vực` AS kv FROM `Máy tính` ORDER BY `ID Máy`")->fetch_all(MYSQLI_ASSOC);
+    $may_ds = $conn->query("SELECT `ID Máy` AS id, `Tên máy` AS ten, `Cấu hình` AS ch, `Trạng thái` AS tt, `Khu vực_ID Khu vực` AS kv FROM `máy tính` ORDER BY `ID Máy`")->fetch_all(MYSQLI_ASSOC);
 } else {
-    $nv_ds = $conn->query("SELECT `Mã nhân viên` AS id, `Họ và tên` AS ten, `SĐT` AS sdt, `Tên đăng nhập` AS tk, `Vai trò` AS vt FROM `Nhân viên` ORDER BY `Mã nhân viên`")->fetch_all(MYSQLI_ASSOC);
+    $nv_ds = $conn->query("SELECT `Mã nhân viên` AS id, `Họ và tên` AS ten, `SĐT` AS sdt, `Tên đăng nhập` AS tk, `Vai trò` AS vt FROM `nhân viên` ORDER BY `Mã nhân viên`")->fetch_all(MYSQLI_ASSOC);
 }
 
 dau_trang('Quản lý danh mục', 'quan_ly');

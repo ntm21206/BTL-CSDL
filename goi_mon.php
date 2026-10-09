@@ -15,11 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
             $sl = (int)($_POST['sl'] ?? 0);
             if ($sl < 1 || $sl > 50) throw new Exception('Số lượng phải từ 1 đến 50.');
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT `ID Phiên` FROM `Phiên sử dụng máy` WHERE `ID Phiên` = ? AND `Thời gian kết thúc` IS NULL FOR UPDATE");
+            $st = $conn->prepare("SELECT `ID Phiên` FROM `phiên sử dụng máy` WHERE `ID Phiên` = ? AND `Thời gian kết thúc` IS NULL FOR UPDATE");
             $st->bind_param('i', $phien);
             $st->execute();
             if (!$st->get_result()->fetch_assoc()) throw new Exception('Phiên này đã kết thúc, không thể gọi thêm món.');
-            $st = $conn->prepare("SELECT `Tên dịch vụ` AS ten, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `Dịch vụ` WHERE `Mã dịch vụ` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT `Tên dịch vụ` AS ten, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` WHERE `Mã dịch vụ` = ? FOR UPDATE");
             $st->bind_param('i', $dv);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
@@ -27,10 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
             if ((int)$m['ton'] < $sl) throw new Exception('Không đủ hàng: ' . $m['ten'] . ' chỉ còn ' . (int)$m['ton'] . '.');
             $gia = (float)$m['gia'];
             $thanh = $gia * $sl;
-            $st = $conn->prepare("INSERT INTO `Phiên sử dụng dịch vụ` (`Thời gian`, `Số lượng`, `Đơn giá`, `Thành tiền`, `Dịch vụ_Mã dịch vụ`, `Phiên sử dụng máy_ID Phiên`) VALUES (NOW(), ?, ?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `phiên sử dụng dịch vụ` (`Thời gian`, `Số lượng`, `Đơn giá`, `Thành tiền`, `Dịch vụ_Mã dịch vụ`, `Phiên sử dụng máy_ID Phiên`) VALUES (NOW(), ?, ?, ?, ?, ?)");
             $st->bind_param('iddii', $sl, $gia, $thanh, $dv, $phien);
             $st->execute();
-            $st = $conn->prepare("UPDATE `Dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` - ? WHERE `Mã dịch vụ` = ?");
+            $st = $conn->prepare("UPDATE `dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` - ? WHERE `Mã dịch vụ` = ?");
             $st->bind_param('ii', $sl, $dv);
             $st->execute();
             $conn->commit();
@@ -41,20 +41,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
         {
             $id = (int)($_POST['id'] ?? 0);
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT s.`Số lượng` AS sl, s.`Dịch vụ_Mã dịch vụ` AS dv, s.`Phiên sử dụng máy_ID Phiên` AS phien FROM `Phiên sử dụng dịch vụ` s WHERE s.`ID Phiên sử dụng dịch vụ` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT s.`Số lượng` AS sl, s.`Dịch vụ_Mã dịch vụ` AS dv, s.`Phiên sử dụng máy_ID Phiên` AS phien FROM `phiên sử dụng dịch vụ` s WHERE s.`ID Phiên sử dụng dịch vụ` = ? FOR UPDATE");
             $st->bind_param('i', $id);
             $st->execute();
             $d = $st->get_result()->fetch_assoc();
             if (!$d) throw new Exception('Không tìm thấy dòng món.');
             $phien = (int)$d['phien'];
-            $st = $conn->prepare("SELECT `ID Phiên` FROM `Phiên sử dụng máy` WHERE `ID Phiên` = ? AND `Thời gian kết thúc` IS NULL FOR UPDATE");
+            $st = $conn->prepare("SELECT `ID Phiên` FROM `phiên sử dụng máy` WHERE `ID Phiên` = ? AND `Thời gian kết thúc` IS NULL FOR UPDATE");
             $st->bind_param('i', $phien);
             $st->execute();
             if (!$st->get_result()->fetch_assoc()) throw new Exception('Phiên đã kết thúc, không thể hủy món.');
-            $st = $conn->prepare("DELETE FROM `Phiên sử dụng dịch vụ` WHERE `ID Phiên sử dụng dịch vụ` = ?");
+            $st = $conn->prepare("DELETE FROM `phiên sử dụng dịch vụ` WHERE `ID Phiên sử dụng dịch vụ` = ?");
             $st->bind_param('i', $id);
             $st->execute();
-            $st = $conn->prepare("UPDATE `Dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` + ? WHERE `Mã dịch vụ` = ?");
+            $st = $conn->prepare("UPDATE `dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` + ? WHERE `Mã dịch vụ` = ?");
             $st->bind_param('ii', $d['sl'], $d['dv']);
             $st->execute();
             $conn->commit();
@@ -73,7 +73,7 @@ $phiens = $conn->query("SELECT p.`ID Phiên` AS id, m.`Tên máy` AS may, t.`Tê
         TIMESTAMPDIFF(MINUTE, p.`Thời gian bắt đầu`, NOW()) AS phut
     FROM `phiên sử dụng máy` p
     JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
-    LEFT JOIN `Tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
+    LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
     WHERE p.`Thời gian kết thúc` IS NULL
     ORDER BY m.`ID Máy`")->fetch_all(MYSQLI_ASSOC);
 
@@ -82,13 +82,13 @@ $chon = null;
 foreach ($phiens as $p) { if ((int)$p['id'] === $sel) $chon = $p; }
 if (!$chon && $phiens) $chon = $phiens[0];
 
-$menu = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `Dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
+$menu = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
 $nhom = [];
 foreach ($menu as $m) $nhom[$m['loai']][] = $m;
 
 $dong = []; $tong_dv = 0;
 if ($chon) {
-    $st = $conn->prepare("SELECT s.`ID Phiên sử dụng dịch vụ` AS id, d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `Phiên sử dụng dịch vụ` s JOIN `Dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ? ORDER BY s.`ID Phiên sử dụng dịch vụ`");
+    $st = $conn->prepare("SELECT s.`ID Phiên sử dụng dịch vụ` AS id, d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ? ORDER BY s.`ID Phiên sử dụng dịch vụ`");
     $st->bind_param('i', $chon['id']);
     $st->execute();
     $dong = $st->get_result()->fetch_all(MYSQLI_ASSOC);

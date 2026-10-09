@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'ket_ca')
         $cuoi = (float)($_POST['cuoi'] ?? -1);
         if ($cuoi < 0) throw new Exception('Vui lòng nhập số tiền cuối ca.');
         $nv_id = (int)$nv['id'];
-        $st = $conn->prepare("UPDATE `Ca làm` SET `Giờ ra` = NOW(), `Tiền cuối ca` = ? WHERE `Nhân viên_Mã nhân viên` = ? AND `Giờ ra` IS NULL");
+        $st = $conn->prepare("UPDATE `ca làm` SET `Giờ ra` = NOW(), `Tiền cuối ca` = ? WHERE `Nhân viên_Mã nhân viên` = ? AND `Giờ ra` IS NULL");
         $st->bind_param('di', $cuoi, $nv_id);
         $st->execute();
         if ($st->affected_rows === 0) throw new Exception('Bạn không có ca nào đang mở.');
@@ -37,17 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'ket_ca')
 }
 
 /* ---------- Ca đang mở của người đăng nhập ---------- */
-$st = $conn->prepare("SELECT `ID ca` AS id, `Giờ vào` AS vao, `Tiền đầu ca` AS dau FROM `Ca làm` WHERE `Nhân viên_Mã nhân viên` = ? AND `Giờ ra` IS NULL ORDER BY `ID ca` DESC LIMIT 1");
+$st = $conn->prepare("SELECT `ID ca` AS id, `Giờ vào` AS vao, `Tiền đầu ca` AS dau FROM `ca làm` WHERE `Nhân viên_Mã nhân viên` = ? AND `Giờ ra` IS NULL ORDER BY `ID ca` DESC LIMIT 1");
 $st->bind_param('i', $nv['id']);
 $st->execute();
 $ca_mo = $st->get_result()->fetch_assoc();
 $ket_ca = 0;
 if ($ca_mo) {
-    $st = $conn->prepare("SELECT COALESCE(SUM(`Tổng hóa đơn`), 0) AS s FROM `Hóa đơn` WHERE `Ca làm_ID ca` = ? AND `Phương thức thanh toán` = 'Tiền mặt' AND `Trạng thái` = 'Đã thanh toán'");
+    $st = $conn->prepare("SELECT COALESCE(SUM(`Tổng hóa đơn`), 0) AS s FROM `hóa đơn` WHERE `Ca làm_ID ca` = ? AND `Phương thức thanh toán` = 'Tiền mặt' AND `Trạng thái` = 'Đã thanh toán'");
     $st->bind_param('i', $ca_mo['id']);
     $st->execute();
     $tm = (float)$st->get_result()->fetch_assoc()['s'];
-    $st = $conn->prepare("SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `Giao dịch nạp tiền` WHERE `Ca làm_ID ca` = ?");
+    $st = $conn->prepare("SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `giao dịch nạp tiền` WHERE `Ca làm_ID ca` = ?");
     $st->bind_param('i', $ca_mo['id']);
     $st->execute();
     $nap_ca = (float)$st->get_result()->fetch_assoc()['s'];
@@ -67,7 +67,7 @@ if ($day_du) {
     $tu = $d1->format('Y-m-d'); $den = $d2->format('Y-m-d');
 
     $theo_ngay = [];
-    $r = truy_van($conn, "SELECT DATE(`Ngày xuất`) AS d, SUM(`Tổng hóa đơn`) AS s, COUNT(*) AS c FROM `Hóa đơn` WHERE `Trạng thái` = 'Đã thanh toán' AND DATE(`Ngày xuất`) BETWEEN ? AND ? GROUP BY DATE(`Ngày xuất`)", $tu, $den);
+    $r = truy_van($conn, "SELECT DATE(`Ngày xuất`) AS d, SUM(`Tổng hóa đơn`) AS s, COUNT(*) AS c FROM `hóa đơn` WHERE `Trạng thái` = 'Đã thanh toán' AND DATE(`Ngày xuất`) BETWEEN ? AND ? GROUP BY DATE(`Ngày xuất`)", $tu, $den);
     foreach ($r->fetch_all(MYSQLI_ASSOC) as $x) $theo_ngay[$x['d']] = $x;
     $ngay = []; $max = 0; $tong_dt = 0; $so_hd = 0;
     for ($d = clone $d1; $d <= $d2; $d->modify('+1 day')) {
@@ -77,21 +77,21 @@ if ($day_du) {
         $max = max($max, $s); $tong_dt += $s;
         $so_hd += isset($theo_ngay[$k]) ? (int)$theo_ngay[$k]['c'] : 0;
     }
-    $nap = (float)truy_van($conn, "SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `Giao dịch nạp tiền` WHERE DATE(`Thời gian nạp`) BETWEEN ? AND ?", $tu, $den)->fetch_assoc()['s'];
-    $ph = truy_van($conn, "SELECT COUNT(*) AS c, COALESCE(SUM(`Thời lượng`), 0) AS p FROM `Phiên sử dụng máy` WHERE `Thời gian kết thúc` IS NOT NULL AND DATE(`Thời gian bắt đầu`) BETWEEN ? AND ?", $tu, $den)->fetch_assoc();
-    $theo_pt = truy_van($conn, "SELECT `Phương thức thanh toán` AS pt, SUM(`Tổng hóa đơn`) AS s, COUNT(*) AS c FROM `Hóa đơn` WHERE `Trạng thái` = 'Đã thanh toán' AND DATE(`Ngày xuất`) BETWEEN ? AND ? GROUP BY `Phương thức thanh toán` ORDER BY s DESC", $tu, $den)->fetch_all(MYSQLI_ASSOC);
+    $nap = (float)truy_van($conn, "SELECT COALESCE(SUM(`Số tiền nạp`), 0) AS s FROM `giao dịch nạp tiền` WHERE DATE(`Thời gian nạp`) BETWEEN ? AND ?", $tu, $den)->fetch_assoc()['s'];
+    $ph = truy_van($conn, "SELECT COUNT(*) AS c, COALESCE(SUM(`Thời lượng`), 0) AS p FROM `phiên sử dụng máy` WHERE `Thời gian kết thúc` IS NOT NULL AND DATE(`Thời gian bắt đầu`) BETWEEN ? AND ?", $tu, $den)->fetch_assoc();
+    $theo_pt = truy_van($conn, "SELECT `Phương thức thanh toán` AS pt, SUM(`Tổng hóa đơn`) AS s, COUNT(*) AS c FROM `hóa đơn` WHERE `Trạng thái` = 'Đã thanh toán' AND DATE(`Ngày xuất`) BETWEEN ? AND ? GROUP BY `Phương thức thanh toán` ORDER BY s DESC", $tu, $den)->fetch_all(MYSQLI_ASSOC);
     $top_may = truy_van($conn, "SELECT m.`Tên máy` AS ten, COUNT(p.`ID Phiên`) AS n, SUM(p.`Thời lượng`) AS phut, SUM(p.`Tiền sử dụng`) AS tien
-        FROM `phiên sử dụng máy` p JOIN `Máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
+        FROM `phiên sử dụng máy` p JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
         WHERE p.`Thời gian kết thúc` IS NOT NULL AND DATE(p.`Thời gian bắt đầu`) BETWEEN ? AND ?
         GROUP BY m.`ID Máy`, m.`Tên máy` ORDER BY n DESC, phut DESC LIMIT 5", $tu, $den)->fetch_all(MYSQLI_ASSOC);
     $top_dv = truy_van($conn, "SELECT d.`Tên dịch vụ` AS ten, SUM(s.`Số lượng`) AS sl, SUM(s.`Thành tiền`) AS tien
-        FROM `phiên sử dụng dịch vụ` s JOIN `Dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ`
+        FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ`
         WHERE DATE(s.`Thời gian`) BETWEEN ? AND ?
         GROUP BY d.`Mã dịch vụ`, d.`Tên dịch vụ` ORDER BY sl DESC LIMIT 5", $tu, $den)->fetch_all(MYSQLI_ASSOC);
     $cas = truy_van($conn, "SELECT c.`ID ca` AS id, c.`Giờ vào` AS vao, c.`Giờ ra` AS ra, c.`Tiền đầu ca` AS dau, c.`Tiền cuối ca` AS cuoi, n.`Họ và tên` AS nv,
-            (SELECT COALESCE(SUM(h.`Tổng hóa đơn`), 0) FROM `Hóa đơn` h WHERE h.`Ca làm_ID ca` = c.`ID ca` AND h.`Trạng thái` = 'Đã thanh toán') AS dt,
-            (SELECT COALESCE(SUM(g.`Số tiền nạp`), 0) FROM `Giao dịch nạp tiền` g WHERE g.`Ca làm_ID ca` = c.`ID ca`) AS nap
-        FROM `ca làm` c JOIN `Nhân viên` n ON n.`Mã nhân viên` = c.`Nhân viên_Mã nhân viên`
+            (SELECT COALESCE(SUM(h.`Tổng hóa đơn`), 0) FROM `hóa đơn` h WHERE h.`Ca làm_ID ca` = c.`ID ca` AND h.`Trạng thái` = 'Đã thanh toán') AS dt,
+            (SELECT COALESCE(SUM(g.`Số tiền nạp`), 0) FROM `giao dịch nạp tiền` g WHERE g.`Ca làm_ID ca` = c.`ID ca`) AS nap
+        FROM `ca làm` c JOIN `nhân viên` n ON n.`Mã nhân viên` = c.`Nhân viên_Mã nhân viên`
         WHERE DATE(c.`Giờ vào`) BETWEEN ? AND ? ORDER BY c.`ID ca` DESC", $tu, $den)->fetch_all(MYSQLI_ASSOC);
 }
 

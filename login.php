@@ -5,7 +5,7 @@ $loi = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
-    $stmt = $conn->prepare("SELECT `Mã nhân viên`, `Họ và tên`, `Vai trò`, `Mật khẩu` FROM `Nhân viên` WHERE `Tên đăng nhập` = ?");
+    $stmt = $conn->prepare("SELECT `Mã nhân viên`, `Họ và tên`, `Vai trò`, `Mật khẩu` FROM `nhân viên` WHERE `Tên đăng nhập` = ?");
     $stmt->bind_param('s', $u);
     $stmt->execute();
     $nv = $stmt->get_result()->fetch_assoc();
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (hash_equals($nv['Mật khẩu'], $p)) {      // mật khẩu cũ lưu chữ thường
             $ok = true;
             $h = password_hash($p, PASSWORD_DEFAULT);
-            $up = $conn->prepare("UPDATE `Nhân viên` SET `Mật khẩu` = ? WHERE `Mã nhân viên` = ?");
+            $up = $conn->prepare("UPDATE `nhân viên` SET `Mật khẩu` = ? WHERE `Mã nhân viên` = ?");
             $up->bind_param('si', $h, $nv['Mã nhân viên']);
             $up->execute();
         }

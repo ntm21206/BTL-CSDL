@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'thanh_to
     $pt = $_POST['pt'] ?? '';
     try {
         if (!in_array($pt, ['Tiền mặt', 'QR', 'Thẻ ngân hàng'], true)) throw new Exception('Phương thức thanh toán không hợp lệ.');
-        $st = $conn->prepare("UPDATE `Hóa đơn` SET `Trạng thái` = 'Đã thanh toán', `Phương thức thanh toán` = ? WHERE `Mã hóa đơn` = ? AND `Trạng thái` = 'Chưa thanh toán'");
+        $st = $conn->prepare("UPDATE `hóa đơn` SET `Trạng thái` = 'Đã thanh toán', `Phương thức thanh toán` = ? WHERE `Mã hóa đơn` = ? AND `Trạng thái` = 'Chưa thanh toán'");
         $st->bind_param('si', $pt, $id);
         $st->execute();
         if ($st->affected_rows === 0) throw new Exception('Hóa đơn này đã được thanh toán.');
@@ -31,7 +31,7 @@ $st = $conn->prepare("SELECT h.`Mã hóa đơn` AS id, h.`Ngày xuất` AS ngay,
     FROM `hóa đơn` h
     JOIN `phiên sử dụng máy` p ON p.`ID Phiên` = h.`Phiên sử dụng máy_ID Phiên`
     JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
-    LEFT JOIN `Tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
+    LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
     JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
     WHERE DATE(h.`Ngày xuất`) BETWEEN ? AND ?
     ORDER BY h.`Mã hóa đơn` DESC LIMIT 200");
@@ -51,14 +51,14 @@ if ($sel) {
         FROM `hóa đơn` h
         JOIN `phiên sử dụng máy` p ON p.`ID Phiên` = h.`Phiên sử dụng máy_ID Phiên`
         JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
-        LEFT JOIN `Tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
+        LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
         JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
         WHERE h.`Mã hóa đơn` = ?");
     $st->bind_param('i', $sel);
     $st->execute();
     $ct = $st->get_result()->fetch_assoc();
     if ($ct) {
-        $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Đơn giá` AS gia, s.`Thành tiền` AS tt FROM `Phiên sử dụng dịch vụ` s JOIN `Dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ?");
+        $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Đơn giá` AS gia, s.`Thành tiền` AS tt FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ?");
         $st->bind_param('i', $ct['phien']);
         $st->execute();
         $dv_ds = $st->get_result()->fetch_all(MYSQLI_ASSOC);
