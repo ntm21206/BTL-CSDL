@@ -1,8 +1,10 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+if (file_exists(__DIR__ . '/config.local.php')) require __DIR__ . '/config.local.php';
 $host = getenv('DB_HOST') ?: '127.0.0.1';
 $user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: 'MAT_KHAU_MYSQL_CUA_BAN';
+$pass = getenv('DB_PASS') ?: '';
 $name = getenv('DB_NAME') ?: 'csdl_net';
 $port = (int)(getenv('DB_PORT') ?: 3306);
 

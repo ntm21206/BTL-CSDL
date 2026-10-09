@@ -14,14 +14,40 @@ function lay_ca($conn, $nv_id) {
     return (int)$conn->insert_id;
 }
 function bao($loai, $msg) { $_SESSION['flash'] = [$loai, $msg]; }
+function quyen_trang() {
+    return [
+        'so_do_may'  => ['Quản lý', 'Nhân viên', 'Kỹ thuật'],
+        'khach_hang' => ['Quản lý', 'Nhân viên'],
+        'goi_mon'    => ['Quản lý', 'Nhân viên'],
+        'hoa_don'    => ['Quản lý', 'Nhân viên'],
+        'bao_cao'    => ['Quản lý', 'Nhân viên'],
+        'quan_ly'    => ['Quản lý'],
+    ];
+}
+function co_quyen($trang) {
+    $vt = $_SESSION['nv']['vaitro'] ?? '';
+    return in_array($vt, quyen_trang()[$trang] ?? [], true);
+}
+function yeu_cau_quyen($trang) {
+    if (empty($_SESSION['nv'])) { header('Location: login.php'); exit; }
+    if (!co_quyen($trang)) {
+        http_response_code(403);
+        dau_trang('Không có quyền truy cập');
+        echo '<p class="loi">Vai trò "' . e($_SESSION['nv']['vaitro']) . '" không được vào trang này.</p>';
+        echo '<a class="btn b1" style="align-self:flex-start" href="so_do_may.php">Về Sơ đồ máy</a>';
+        cuoi_trang();
+        exit;
+    }
+}
 
 function dau_trang($tieu_de, $act = '') {
     $menu = [
         'so_do_may'  => ['so_do_may.php',  'Sơ đồ máy', true],
         'khach_hang' => ['khach_hang.php', 'Khách hàng & nạp tiền', true],
-        'goi_mon'    => ['goi_mon.php',    'Gọi món', false],
-        'hoa_don'    => ['hoa_don.php',    'Hóa đơn', false],
-        'bao_cao'    => ['bao_cao.php',    'Báo cáo', false],
+        'goi_mon'    => ['goi_mon.php',    'Gọi món', true],
+        'hoa_don'    => ['hoa_don.php',    'Hóa đơn', true],
+        'bao_cao'    => ['bao_cao.php',    'Báo cáo', true],
+        'quan_ly'    => ['quan_ly.php', 'Quản lý danh mục', true],
     ];
     $nv = $_SESSION['nv'];
 ?>
@@ -38,13 +64,10 @@ function dau_trang($tieu_de, $act = '') {
 <div class="app">
 <aside class="side">
 <p class="logo">Tiệm Net</p>
-<?php foreach ($menu as $k => $mn): ?>
-  <?php if ($mn[2]): ?>
+<?php foreach ($menu as $k => $mn): if (!co_quyen($k)) continue; ?>
   <a class="nav<?= $k === $act ? ' act' : '' ?>" href="<?= $mn[0] ?>"><?= e($mn[1]) ?></a>
-  <?php else: ?>
-  <span class="nav off"><?= e($mn[1]) ?> (sắp có)</span>
-  <?php endif; ?>
-<?php endforeach; ?>
+<?php endforeach; 
+?>
 <a class="nav" href="logout.php">Đăng xuất</a>
 </aside>
 <main class="main">

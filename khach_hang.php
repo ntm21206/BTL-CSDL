@@ -1,7 +1,7 @@
 <?php
 require 'config.php';
 require 'giao_dien.php';
-yeu_cau_dang_nhap();
+yeu_cau_quyen('so_do_may');
 $nv = $_SESSION['nv'];
 
 /* ---------- Xử lý thao tác ---------- */
@@ -106,8 +106,8 @@ $q = trim($_GET['q'] ?? '');
 $like = '%' . $q . '%';
 $st = $conn->prepare("SELECT k.`ID Khách hàng` AS kid, k.`Họ và tên` AS ten, k.`SĐT` AS sdt, h.`Tên hạng` AS hang,
         t.`ID Tài khoản` AS tid, t.`Tên đăng nhập` AS tk, t.`Trạng thái` AS tt, t.`Số dư còn lại` AS so_du
-    FROM `Khách hàng` k
-    JOIN `Hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng`
+    FROM `khách hàng` k
+    JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng`
     LEFT JOIN `Tài khoản` t ON t.`Khách hàng_ID Khách hàng` = k.`ID Khách hàng`
     WHERE k.`Họ và tên` LIKE ? OR k.`SĐT` LIKE ? OR t.`Tên đăng nhập` LIKE ?
     ORDER BY k.`ID Khách hàng` DESC");
@@ -121,8 +121,8 @@ foreach ($ds as $r) { if ((int)$r['tid'] === $sel) $chon = $r; }
 $lich_su = [];
 if (!$chon && $sel) {
     $st = $conn->prepare("SELECT k.`Họ và tên` AS ten, k.`SĐT` AS sdt, h.`Tên hạng` AS hang, t.`ID Tài khoản` AS tid, t.`Tên đăng nhập` AS tk, t.`Trạng thái` AS tt, t.`Số dư còn lại` AS so_du
-        FROM `Tài khoản` t JOIN `Khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
-        JOIN `Hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ?");
+        FROM `tài khoản` t JOIN `Khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
+        JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ?");
     $st->bind_param('i', $sel);
     $st->execute();
     $chon = $st->get_result()->fetch_assoc();
