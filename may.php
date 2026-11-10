@@ -1,3 +1,20 @@
+Claude
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+May · PHP
 <?php
 require 'config.php';
 require 'giao_dien.php';
@@ -17,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($act === 'dang_nhap') {
             $u = trim($_POST['user'] ?? ''); $pw = $_POST['pass'] ?? '';
             $conn->begin_transaction();
-            $st = $conn->prepare("SELECT `ID Tài khoản` AS id, `Mật khẩu` AS mk, `Trạng thái` AS tt, `Số dư còn lại` AS so_du FROM `Tài khoản` WHERE `Tên đăng nhập` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT `ID Tài khoản` AS id, `Mật khẩu` AS mk, `Trạng thái` AS tt, `Số dư còn lại` AS so_du FROM `tài khoản` WHERE `Tên đăng nhập` = ? FOR UPDATE");
             $st->bind_param('s', $u);
             $st->execute();
             $t = $st->get_result()->fetch_assoc();
@@ -27,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 elseif (hash_equals($t['mk'], $pw)) {          // mật khẩu cũ lưu chữ thường: băm lại
                     $ok = true;
                     $h = password_hash($pw, PASSWORD_DEFAULT);
-                    $up = $conn->prepare("UPDATE `Tài khoản` SET `Mật khẩu` = ? WHERE `ID Tài khoản` = ?");
+                    $up = $conn->prepare("UPDATE `tài khoản` SET `Mật khẩu` = ? WHERE `ID Tài khoản` = ?");
                     $up->bind_param('si', $h, $t['id']);
                     $up->execute();
                 }
@@ -35,13 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$ok) throw new Exception('Sai tên đăng nhập hoặc mật khẩu.');
             if ($t['tt'] !== 'Hoạt động') throw new Exception('Tài khoản đang bị khóa.');
 
-            $st = $conn->prepare("SELECT m.`Trạng thái` AS tt, k.`Đơn giá` AS gia FROM `Máy tính` m JOIN `Khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT m.`Trạng thái` AS tt, k.`Đơn giá` AS gia FROM `máy tính` m JOIN `khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ? FOR UPDATE");
             $st->bind_param('i', $may_id);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
             if (!$m) throw new Exception('Không tìm thấy máy.');
 
-            $st = $conn->prepare("SELECT `ID Phiên` AS id, `Máy tính_ID Máy` AS may FROM `Phiên sử dụng máy` WHERE `Tài khoản_ID Tài khoản` = ? AND `Thời gian kết thúc` IS NULL LIMIT 1");
+            $st = $conn->prepare("SELECT `ID Phiên` AS id, `Máy tính_ID Máy` AS may FROM `phiên sử dụng máy` WHERE `Tài khoản_ID Tài khoản` = ? AND `Thời gian kết thúc` IS NULL LIMIT 1");
             $st->bind_param('i', $t['id']);
             $st->execute();
             $cu = $st->get_result()->fetch_assoc();
@@ -55,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ((float)$t['so_du'] < $toi_thieu) throw new Exception('Số dư không đủ (cần tối thiểu ' . tien($toi_thieu) . '). Vui lòng nạp thêm tại quầy.');
                 $gia = (float)$m['gia'];
                 $tkid = (int)$t['id'];
-                $st = $conn->prepare("INSERT INTO `Phiên sử dụng máy` (`Thời gian bắt đầu`, `Thời gian kết thúc`, `Thời lượng`, `Đơn giá`, `Tiền sử dụng`, `Tài khoản_ID Tài khoản`, `Máy tính_ID Máy`) VALUES (NOW(), NULL, 0, ?, 0, ?, ?)");
+                $st = $conn->prepare("INSERT INTO `phiên sử dụng máy` (`Thời gian bắt đầu`, `Thời gian kết thúc`, `Thời lượng`, `Đơn giá`, `Tiền sử dụng`, `Tài khoản_ID Tài khoản`, `Máy tính_ID Máy`) VALUES (NOW(), NULL, 0, ?, 0, ?, ?)");
                 $st->bind_param('dii', $gia, $tkid, $may_id);
                 $st->execute();
                 $phien = (int)$conn->insert_id;
-                $st = $conn->prepare("UPDATE `Máy tính` SET `Trạng thái` = 'Online' WHERE `ID Máy` = ?");
+                $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = 'Online' WHERE `ID Máy` = ?");
                 $st->bind_param('i', $may_id);
                 $st->execute();
             }
@@ -75,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->begin_transaction();
             $p = thong_tin_phien($conn, (int)$kh['phien'], true);
             if (!$p || (int)$p['tk'] !== (int)$kh['tk']) throw new Exception('Phiên đã kết thúc.');
-            $st = $conn->prepare("SELECT `Tên dịch vụ` AS ten, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `Dịch vụ` WHERE `Mã dịch vụ` = ? FOR UPDATE");
+            $st = $conn->prepare("SELECT `Tên dịch vụ` AS ten, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` WHERE `Mã dịch vụ` = ? FOR UPDATE");
             $st->bind_param('i', $dv);
             $st->execute();
             $m = $st->get_result()->fetch_assoc();
@@ -85,10 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $du_kien = round(($p['tien_may'] + $p['dv'] + $thanh) * (100 - $p['giam']) / 100);
             if ($du_kien > $p['so_du']) throw new Exception('Số dư không đủ để gọi món này. Vui lòng nạp thêm tại quầy.');
             $phien = (int)$kh['phien'];
-            $st = $conn->prepare("INSERT INTO `Phiên sử dụng dịch vụ` (`Thời gian`, `Số lượng`, `Đơn giá`, `Thành tiền`, `Dịch vụ_Mã dịch vụ`, `Phiên sử dụng máy_ID Phiên`) VALUES (NOW(), ?, ?, ?, ?, ?)");
+            $st = $conn->prepare("INSERT INTO `phiên sử dụng dịch vụ` (`Thời gian`, `Số lượng`, `Đơn giá`, `Thành tiền`, `Dịch vụ_Mã dịch vụ`, `Phiên sử dụng máy_ID Phiên`) VALUES (NOW(), ?, ?, ?, ?, ?)");
             $st->bind_param('iddii', $sl, $gia, $thanh, $dv, $phien);
             $st->execute();
-            $st = $conn->prepare("UPDATE `Dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` - ? WHERE `Mã dịch vụ` = ?");
+            $st = $conn->prepare("UPDATE `dịch vụ` SET `Số lượng tồn` = `Số lượng tồn` - ? WHERE `Mã dịch vụ` = ?");
             $st->bind_param('ii', $sl, $dv);
             $st->execute();
             $conn->commit();
@@ -98,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$kh) throw new Exception('Bạn chưa đăng nhập vào máy.');
             $kq = ket_thuc_phien($conn, (int)$kh['phien'], 'Số dư tài khoản');
             unset($_SESSION['kh']);
-            $st = $conn->prepare("SELECT `Số dư còn lại` AS s FROM `Tài khoản` WHERE `ID Tài khoản` = ?");
+            $st = $conn->prepare("SELECT `Số dư còn lại` AS s FROM `tài khoản` WHERE `ID Tài khoản` = ?");
             $st->bind_param('i', $kh['tk']);
             $st->execute();
             $con = $st->get_result()->fetch_assoc()['s'];
@@ -129,20 +146,20 @@ unset($_SESSION['kh_flash']);
 
 $may = null;
 if ($may_id) {
-    $st = $conn->prepare("SELECT m.`Tên máy` AS ten, m.`Trạng thái` AS tt, k.`Mô tả` AS kv, k.`Đơn giá` AS gia FROM `Máy tính` m JOIN `Khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ?");
+    $st = $conn->prepare("SELECT m.`Tên máy` AS ten, m.`Trạng thái` AS tt, k.`Mô tả` AS kv, k.`Đơn giá` AS gia FROM `máy tính` m JOIN `khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` WHERE m.`ID Máy` = ?");
     $st->bind_param('i', $may_id);
     $st->execute();
     $may = $st->get_result()->fetch_assoc();
 }
 $mays = [];
 if (!$may) {
-    $mays = $conn->query("SELECT m.`ID Máy` AS id, m.`Tên máy` AS ten, m.`Trạng thái` AS tt, k.`Mô tả` AS kv, k.`Đơn giá` AS gia FROM `Máy tính` m JOIN `Khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` ORDER BY m.`ID Máy`")->fetch_all(MYSQLI_ASSOC);
+    $mays = $conn->query("SELECT m.`ID Máy` AS id, m.`Tên máy` AS ten, m.`Trạng thái` AS tt, k.`Mô tả` AS kv, k.`Đơn giá` AS gia FROM `máy tính` m JOIN `khu vực` k ON k.`ID Khu vực` = m.`Khu vực_ID Khu vực` ORDER BY m.`ID Máy`")->fetch_all(MYSQLI_ASSOC);
 }
 $menu = $dong = [];
 if ($p) {
-    $rows = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `Dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
+    $rows = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
     foreach ($rows as $r) $menu[$r['loai']][] = $r;
-    $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `Phiên sử dụng dịch vụ` s JOIN `Dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ? ORDER BY s.`ID Phiên sử dụng dịch vụ`");
+    $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ? ORDER BY s.`ID Phiên sử dụng dịch vụ`");
     $st->bind_param('i', $p['id']);
     $st->execute();
     $dong = $st->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -253,3 +270,4 @@ setInterval(function () { var a = document.activeElement; if (!a || a.tagName !=
 </div>
 </body>
 </html>
+Claude finished the response
