@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-body">
+  <a class="muted" style="font-size:13px" href="may.php">Khách chơi? Đăng nhập vào máy</a>
 <form method="post" class="login-box">
   <h1 class="logo">Tiệm Net</h1>
   <p class="muted">Đăng nhập nhân viên</p>

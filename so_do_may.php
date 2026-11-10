@@ -2,6 +2,8 @@
 require 'config.php';
 require 'giao_dien.php';
 yeu_cau_quyen('so_do_may');
+require 'phien.php';
+tu_dong_ket_thuc_het_tien($conn);
 $nv = $_SESSION['nv'];
 $thu_ngan = in_array($nv['vaitro'], ['Quản lý', 'Nhân viên'], true);
 $bao_tri  = in_array($nv['vaitro'], ['Quản lý', 'Kỹ thuật'], true);

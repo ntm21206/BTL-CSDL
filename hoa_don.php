@@ -32,7 +32,7 @@ $st = $conn->prepare("SELECT h.`Mã hóa đơn` AS id, h.`Ngày xuất` AS ngay,
     JOIN `phiên sử dụng máy` p ON p.`ID Phiên` = h.`Phiên sử dụng máy_ID Phiên`
     JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
     LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
-    JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
+    LEFT JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
     WHERE DATE(h.`Ngày xuất`) BETWEEN ? AND ?
     ORDER BY h.`Mã hóa đơn` DESC LIMIT 200");
 $st->bind_param('ss', $tu, $den);
@@ -52,7 +52,7 @@ if ($sel) {
         JOIN `phiên sử dụng máy` p ON p.`ID Phiên` = h.`Phiên sử dụng máy_ID Phiên`
         JOIN `máy tính` m ON m.`ID Máy` = p.`Máy tính_ID Máy`
         LEFT JOIN `tài khoản` t ON t.`ID Tài khoản` = p.`Tài khoản_ID Tài khoản`
-        JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
+        LEFT JOIN `nhân viên` n ON n.`Mã nhân viên` = h.`Nhân viên_Mã nhân viên`
         WHERE h.`Mã hóa đơn` = ?");
     $st->bind_param('i', $sel);
     $st->execute();

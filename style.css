@@ -104,3 +104,10 @@ tr.sel td { background: #1d3b45; }
 .dong input, .dong select { padding: 8px; width: 100%; min-width: 0; }
 .ngang { display: flex; gap: 6px; align-items: center; }
 .ngang input, .ngang select { flex: 1; }
+.khach-body { min-height: 100vh; font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.khach { max-width: 960px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px; }
+.khach h1 { margin: 0; font-family: 'Chakra Petch', sans-serif; }
+.khach .panel { flex: none; }
+.dang-nhap { max-width: 380px; margin: 40px auto 0; }
+.dongho { color: #5eead4; font-size: 34px; }
+.het-gio b { color: #fca5a5; }
