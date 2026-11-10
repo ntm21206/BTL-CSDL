@@ -1,7 +1,7 @@
 <?php
 require 'config.php';
 require 'giao_dien.php';
-yeu_cau_quyen('so_do_may');
+yeu_cau_quyen('yeu_cau_quyen');
 $nv = $_SESSION['nv'];
 
 /* ---------- Xử lý thao tác ---------- */
