@@ -1,20 +1,3 @@
-Claude
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-May · PHP
 <?php
 require 'config.php';
 require 'giao_dien.php';
@@ -270,4 +253,3 @@ setInterval(function () { var a = document.activeElement; if (!a || a.tagName !=
 </div>
 </body>
 </html>
-Claude finished the response
