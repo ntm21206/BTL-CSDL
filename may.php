@@ -241,7 +241,7 @@ setInterval(function () { var a = document.activeElement; if (!a || a.tagName !=
 
 <?php else: /* ===== CHỌN MÁY (dùng khi demo) ===== */ ?>
   <h1 class="logo" style="text-align:center">Chọn máy bạn đang ngồi</h1>
-  <p class="muted" style="text-align:center">Ở tiệm thật, mỗi máy mở thẳng địa chỉ riêng của nó, ví dụ <code>may.php?may=3</code>.</p>
+  <p class="muted" style="text-align:center"></p>
   <div class="grid">
     <?php foreach ($mays as $m): $cls = $m['tt'] === 'Online' ? 'on' : ($m['tt'] === 'Offline' ? 'off' : 'mt'); ?>
     <a class="m <?= $cls ?>" href="may.php?may=<?= (int)$m['id'] ?>">
