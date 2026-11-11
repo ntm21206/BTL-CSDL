@@ -29,7 +29,7 @@ function thong_tin_phien($conn, $phien, $khoa = false) {
 }
 
 /* Kết thúc phiên, trừ tiền, xuất hóa đơn. $nv_id và $ca_id để null nếu khách tự phục vụ. */
-function ket_thuc_phien($conn, $phien, $pt, $nv_id = null, $ca_id = null) {
+function ket_thuc_phien($conn, $phien, $pt, $nv_id = null, $ca_id = null, $cho_thieu = true) {
     if (!in_array($pt, ['Tiền mặt', 'QR', 'Thẻ ngân hàng', 'Số dư tài khoản'], true)) throw new Exception('Phương thức thanh toán không hợp lệ.');
     $conn->begin_transaction();
     try {
@@ -39,12 +39,16 @@ function ket_thuc_phien($conn, $phien, $pt, $nv_id = null, $ca_id = null) {
         $phut = max(1, $p['phut']);
         $tien_may = (float)$p['tien_may'];
         $dv = (float)$p['dv'];
-        $tong = (float)$p['tong'];
+        $tong = (float)$p['tong'];                       // đã trừ giảm giá theo hạng
+        $giam_tien = ($tien_may + $dv) - $tong;          // số tiền được giảm
         $tm2 = round($tien_may * (100 - $p['giam']) / 100);
 
         if ($pt === 'Số dư tài khoản') {
             if (!$tk) throw new Exception('Khách vãng lai không có số dư để trừ.');
-            if ($p['so_du'] < $tong) $tong = $p['so_du'];      // hết tiền: chỉ trừ phần còn lại
+            if ($p['so_du'] < $tong) {
+                if (!$cho_thieu) throw new Exception('Số dư không đủ (' . tien($p['so_du']) . ' < ' . tien($tong) . ').');
+                $tong = $p['so_du'];                     // hết tiền: chỉ thu phần còn lại
+            }
             $tm2 = min($tm2, $tong);
             $dv2 = $tong - $tm2;
             $moi = $p['so_du'] - $tong;
@@ -68,8 +72,8 @@ function ket_thuc_phien($conn, $phien, $pt, $nv_id = null, $ca_id = null) {
         $st->bind_param('idi', $phut, $tien_may, $phien);
         $st->execute();
 
-        $st = $conn->prepare("INSERT INTO `hóa đơn` (`Tiền dịch vụ`, `Tổng hóa đơn`, `Trạng thái`, `Ngày xuất`, `Phương thức thanh toán`, `Ca làm_ID ca`, `Phiên sử dụng máy_ID Phiên`, `Nhân viên_Mã nhân viên`) VALUES (?, ?, 'Đã thanh toán', NOW(), ?, ?, ?, ?)");
-        $st->bind_param('ddsiii', $dv, $tong, $pt, $ca_id, $phien, $nv_id);
+        $st = $conn->prepare("INSERT INTO `hóa đơn` (`Tiền dịch vụ`, `Tiền giảm giá`, `Tổng hóa đơn`, `Trạng thái`, `Ngày xuất`, `Phương thức thanh toán`, `Ca làm_ID ca`, `Phiên sử dụng máy_ID Phiên`, `Nhân viên_Mã nhân viên`) VALUES (?, ?, ?, 'Đã thanh toán', NOW(), ?, ?, ?, ?)");
+        $st->bind_param('dddsiii', $dv, $giam_tien, $tong, $pt, $ca_id, $phien, $nv_id);
         $st->execute();
 
         $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = 'Offline' WHERE `ID Máy` = ?");
@@ -77,7 +81,7 @@ function ket_thuc_phien($conn, $phien, $pt, $nv_id = null, $ca_id = null) {
         $st->bind_param('i', $mid);
         $st->execute();
         $conn->commit();
-        return ['tong' => $tong, 'phut' => $phut];
+        return ['tong' => $tong, 'phut' => $phut, 'giam' => $giam_tien];
     } catch (Throwable $e) {
         try { $conn->rollback(); } catch (Throwable $e2) {}
         throw $e;

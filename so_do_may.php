@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $act = $_POST['act'] ?? '';
     $may_id = (int)($_POST['may'] ?? 0);
     try {
-              if (in_array($act, ['mo_phien', 'ket_thuc'], true) && !$thu_ngan) throw new Exception('Bạn không có quyền mở hoặc kết thúc phiên.');
+        if (in_array($act, ['mo_phien', 'ket_thuc'], true) && !$thu_ngan) throw new Exception('Bạn không có quyền mở hoặc kết thúc phiên.');
         if ($act === 'bao_tri' && !$bao_tri) throw new Exception('Bạn không có quyền đổi trạng thái bảo trì.');
         if ($act === 'mo_phien') {
             $tk = (int)($_POST['tk'] ?? 0);
@@ -41,67 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } elseif ($act === 'ket_thuc') {
             $pt = $_POST['pt'] ?? 'Tiền mặt';
-            if (!in_array($pt, ['Tiền mặt', 'QR', 'Thẻ ngân hàng', 'Số dư tài khoản'], true)) throw new Exception('Phương thức thanh toán không hợp lệ.');
-            $conn->begin_transaction();
-            $st = $conn->prepare("SELECT p.`ID Phiên` AS id, p.`Đơn giá` AS gia, p.`Tài khoản_ID Tài khoản` AS tk, TIMESTAMPDIFF(MINUTE, p.`Thời gian bắt đầu`, NOW()) AS phut FROM `phiên sử dụng máy` p WHERE p.`Máy tính_ID Máy` = ? AND p.`Thời gian kết thúc` IS NULL LIMIT 1 FOR UPDATE");
+            $st = $conn->prepare("SELECT `ID Phiên` AS id FROM `phiên sử dụng máy` WHERE `Máy tính_ID Máy` = ? AND `Thời gian kết thúc` IS NULL LIMIT 1");
             $st->bind_param('i', $may_id);
             $st->execute();
             $ph = $st->get_result()->fetch_assoc();
             if (!$ph) throw new Exception('Máy này không có phiên đang chạy.');
-            $phien = (int)$ph['id'];
-            $tk = $ph['tk'] ? (int)$ph['tk'] : 0;
-            $phut = max(1, (int)$ph['phut']);
-            $tien_may = tinh_tien_may($phut, $ph['gia']);
-
-            $st = $conn->prepare("SELECT COALESCE(SUM(`Thành tiền`), 0) AS s FROM `phiên sử dụng dịch vụ` WHERE `Phiên sử dụng máy_ID Phiên` = ?");
-            $st->bind_param('i', $phien);
-            $st->execute();
-            $dv = (float)$st->get_result()->fetch_assoc()['s'];
-
-            $giam = 0; $so_du = 0;
-            if ($tk) {
-                $st = $conn->prepare("SELECT t.`Số dư còn lại` AS so_du, h.`Phần trăm giảm giá` AS giam FROM `tài khoản` t JOIN `khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng` JOIN `hạng thành viên` h ON h.`ID Hạng` = k.`Hạng thành viên_ID Hạng` WHERE t.`ID Tài khoản` = ? FOR UPDATE");
-                $st->bind_param('i', $tk);
-                $st->execute();
-                $r = $st->get_result()->fetch_assoc();
-                if ($r) { $giam = (float)$r['giam']; $so_du = (float)$r['so_du']; }
-            }
-            $tong = round(($tien_may + $dv) * (100 - $giam) / 100);
-            $tm2  = round($tien_may * (100 - $giam) / 100);
-            $dv2  = $tong - $tm2;
-
-            if ($pt === 'Số dư tài khoản') {
-                if (!$tk) throw new Exception('Khách vãng lai không có số dư để trừ.');
-                if ($so_du < $tong) throw new Exception('Số dư không đủ (' . tien($so_du) . ' < ' . tien($tong) . ').');
-                $moi = $so_du - $tong;
-                $st = $conn->prepare("UPDATE `tài khoản` SET `Số dư còn lại` = ? WHERE `ID Tài khoản` = ?");
-                $st->bind_param('di', $moi, $tk);
-                $st->execute();
-                $ls = $conn->prepare("INSERT INTO `lịch sử số dư` (`Loại biến động`, `Số tiền`, `Số dư sau`, `Thời gian`, `Mô tả`, `Tài khoản_ID Tài khoản`, `Phiên sử dụng máy_ID Phiên`) VALUES (?, ?, ?, NOW(), ?, ?, ?)");
-                $loai = 'Trừ tiền chơi'; $sotien = -$tm2; $sdsau = $so_du - $tm2; $mota = 'Chơi máy ' . $phut . ' phút';
-                $ls->bind_param('sddsii', $loai, $sotien, $sdsau, $mota, $tk, $phien);
-                $ls->execute();
-                if ($dv2 > 0) {
-                    $loai = 'Trừ tiền dịch vụ'; $sotien = -$dv2; $sdsau = $moi; $mota = 'Dịch vụ trong phiên';
-                    $ls->execute();
-                }
-            }
-
-            $st = $conn->prepare("UPDATE `phiên sử dụng máy` SET `Thời gian kết thúc` = NOW(), `Thời lượng` = ?, `Tiền sử dụng` = ? WHERE `ID Phiên` = ?");
-            $st->bind_param('idi', $phut, $tien_may, $phien);
-            $st->execute();
-
-            $ca = lay_ca($conn, (int)$nv['id']);
             $nv_id = (int)$nv['id'];
-            $st = $conn->prepare("INSERT INTO `hóa đơn` (`Tiền dịch vụ`, `Tổng hóa đơn`, `Trạng thái`, `Ngày xuất`, `Phương thức thanh toán`, `Ca làm_ID ca`, `Phiên sử dụng máy_ID Phiên`, `Nhân viên_Mã nhân viên`) VALUES (?, ?, 'Đã thanh toán', NOW(), ?, ?, ?, ?)");
-            $st->bind_param('ddsiii', $dv, $tong, $pt, $ca, $phien, $nv_id);
-            $st->execute();
-
-            $st = $conn->prepare("UPDATE `máy tính` SET `Trạng thái` = 'Offline' WHERE `ID Máy` = ?");
-            $st->bind_param('i', $may_id);
-            $st->execute();
-            $conn->commit();
-            bao('ok', 'Đã kết thúc phiên và xuất hóa đơn ' . tien($tong) . ' (' . $pt . ').');
+            $ca = lay_ca($conn, $nv_id);
+            $kq = ket_thuc_phien($conn, (int)$ph['id'], $pt, $nv_id, $ca, false);
+            bao('ok', 'Đã kết thúc phiên và xuất hóa đơn ' . tien($kq['tong']) . ' (' . $pt . ').');
 
         } elseif ($act === 'bao_tri') {
             $st = $conn->prepare("SELECT `Trạng thái` AS tt FROM `máy tính` WHERE `ID Máy` = ?");
@@ -283,3 +231,5 @@ dau_trang('Sơ đồ máy', 'so_do_may');
   <?php endif; ?>
 <?php endif; ?>
 </aside>
+</div>
+<?php cuoi_trang(); ?>
