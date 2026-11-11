@@ -245,12 +245,12 @@ body::before {
   content: ""; position: fixed; inset: 0; z-index: -1;
   background:
     linear-gradient(rgba(8, 12, 24, .78), rgba(8, 12, 24, .88)),
-    url('hinh_anh/nen-quan.jpg') center / cover no-repeat;
+    url('hinh_anh/nen-quan.png') center / cover no-repeat;
 }
 body.login-body::before {
   background:
     linear-gradient(rgba(8, 12, 24, .45), rgba(8, 12, 24, .65)),
-    url('hinh_anh/nen-login.jpg') center / cover no-repeat;
+    url('hinh_anh/nen-login.png') center / cover no-repeat;
 }
 .side { background: rgba(13, 18, 34, .88); backdrop-filter: blur(8px); }
 .panel, .stat, .bang, .mon, .bieu, .tab, .who, .login-box, a.m {
