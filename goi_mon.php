@@ -122,7 +122,7 @@ dau_trang('Gọi món', 'goi_mon');
         <input type="hidden" name="act" value="them">
         <input type="hidden" name="phien" value="<?= (int)$chon['id'] ?>">
         <input type="hidden" name="dv" value="<?= (int)$m['id'] ?>">
-        <?php if (!empty($m['Hình ảnh'])): ?><img class="anh" src="anh_mon/<?= e($m['Hình ảnh']) ?>" alt="<?= e($m['ten']) ?>" loading="lazy"><?php endif; ?>
+        <?php if (!empty($m['Hình ảnh'])): ?><img class="anh" src="hinh_anh/<?= e($m['Hình ảnh']) ?>" alt="<?= e($m['ten']) ?>" loading="lazy"><?php endif; ?>
         <b><?= e($m['ten']) ?></b>
         <span><?= tien($m['gia']) ?> · <?= (int)$m['ton'] > 0 ? 'Còn ' . (int)$m['ton'] : 'Hết hàng' ?></span>
         <div class="sl">
