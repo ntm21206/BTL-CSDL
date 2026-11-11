@@ -92,6 +92,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $conn->commit();
             bao('ok', $msg);
+
+        } elseif ($act === 'dat_mk') {
+            $mk = $_POST['mk'] ?? '';
+            if (strlen($mk) < 4) throw new Exception('Mật khẩu mới phải có ít nhất 4 ký tự.');
+            $st = $conn->prepare("SELECT `Tên đăng nhập` AS tk FROM `tài khoản` WHERE `ID Tài khoản` = ?");
+            $st->bind_param('i', $tid);
+            $st->execute();
+            $t = $st->get_result()->fetch_assoc();
+            if (!$t) throw new Exception('Không tìm thấy tài khoản.');
+            $hash = password_hash($mk, PASSWORD_DEFAULT);
+            $nv_id = (int)$nv['id'];
+            $conn->begin_transaction();
+            $st = $conn->prepare("UPDATE `tài khoản` SET `Mật khẩu` = ? WHERE `ID Tài khoản` = ?");
+            $st->bind_param('si', $hash, $tid);
+            $st->execute();
+            $st = $conn->prepare("INSERT INTO `nhật ký đặt lại mật khẩu` (`Thời gian`, `Tài khoản_ID Tài khoản`, `Nhân viên_Mã nhân viên`) VALUES (NOW(), ?, ?)");
+            $st->bind_param('ii', $tid, $nv_id);
+            $st->execute();
+            $conn->commit();
+            bao('ok', 'Đã đặt lại mật khẩu cho tài khoản ' . $t['tk'] . '. Hãy báo mật khẩu mới cho khách.');
         }
     } catch (Throwable $ex) {
         try { $conn->rollback(); } catch (Throwable $e2) {}
@@ -118,7 +138,7 @@ $ds = $st->get_result()->fetch_all(MYSQLI_ASSOC);
 $sel = (int)($_GET['tk'] ?? 0);
 $chon = null;
 foreach ($ds as $r) { if ((int)$r['tid'] === $sel) $chon = $r; }
-$lich_su = [];
+$lich_su = []; $nk = [];
 if (!$chon && $sel) {
     $st = $conn->prepare("SELECT k.`Họ và tên` AS ten, k.`SĐT` AS sdt, h.`Tên hạng` AS hang, t.`ID Tài khoản` AS tid, t.`Tên đăng nhập` AS tk, t.`Trạng thái` AS tt, t.`Số dư còn lại` AS so_du
         FROM `tài khoản` t JOIN `khách hàng` k ON k.`ID Khách hàng` = t.`Khách hàng_ID Khách hàng`
@@ -132,6 +152,12 @@ if ($chon) {
     $st->bind_param('i', $chon['tid']);
     $st->execute();
     $lich_su = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    try {
+        $st = $conn->prepare("SELECT k.`Thời gian` AS tg, n.`Họ và tên` AS nv FROM `nhật ký đặt lại mật khẩu` k JOIN `nhân viên` n ON n.`Mã nhân viên` = k.`Nhân viên_Mã nhân viên` WHERE k.`Tài khoản_ID Tài khoản` = ? ORDER BY k.`ID Nhật ký` DESC LIMIT 3");
+        $st->bind_param('i', $chon['tid']);
+        $st->execute();
+        $nk = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    } catch (Throwable $e) { $nk = []; }
 }
 
 dau_trang('Khách hàng & nạp tiền', 'khach_hang');
@@ -188,6 +214,26 @@ dau_trang('Khách hàng & nạp tiền', 'khach_hang');
     <p class="muted" style="margin:0">Lần nạp gần đây</p>
     <?php foreach ($lich_su as $l): ?>
     <div class="row"><span><?= e(substr($l['tg'], 5, 11)) ?></span><b><?= tien($l['st']) ?></b></div>
+    <?php endforeach; ?>
+    <?php endif; ?>
+  </aside>
+
+  <aside class="panel">
+    <h2>Đặt lại mật khẩu</h2>
+    <p class="muted" style="font-size:13px">Dùng khi khách quên mật khẩu. Hãy xác minh khách (CCCD hoặc SĐT đăng ký) trước khi đặt lại.</p>
+    <form method="post" onsubmit="return confirm('Đặt lại mật khẩu cho tài khoản này?')">
+      <input type="hidden" name="act" value="dat_mk">
+      <input type="hidden" name="tk" value="<?= (int)$chon['tid'] ?>">
+      <label>Mật khẩu mới (từ 4 ký tự)
+        <input name="mk" type="password" minlength="4" autocomplete="new-password" required>
+      </label>
+      <button class="btn b2" style="margin-top:12px">Đặt lại mật khẩu</button>
+    </form>
+    <?php if ($nk): ?>
+    <div class="hr"></div>
+    <p class="muted" style="margin:0">Lần đặt lại gần đây</p>
+    <?php foreach ($nk as $l): ?>
+    <div class="row"><span><?= e(substr($l['tg'], 5, 11)) ?></span><b><?= e($l['nv']) ?></b></div>
     <?php endforeach; ?>
     <?php endif; ?>
   </aside>
