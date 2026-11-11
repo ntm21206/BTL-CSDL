@@ -140,7 +140,7 @@ if (!$may) {
 }
 $menu = $dong = [];
 if ($p) {
-    $rows = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
+    $rows = $conn->query("SELECT *, `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
     foreach ($rows as $r) $menu[$r['loai']][] = $r;
     $st = $conn->prepare("SELECT d.`Tên dịch vụ` AS ten, s.`Số lượng` AS sl, s.`Thành tiền` AS tt FROM `phiên sử dụng dịch vụ` s JOIN `dịch vụ` d ON d.`Mã dịch vụ` = s.`Dịch vụ_Mã dịch vụ` WHERE s.`Phiên sử dụng máy_ID Phiên` = ? ORDER BY s.`ID Phiên sử dụng dịch vụ`");
     $st->bind_param('i', $p['id']);
@@ -187,6 +187,7 @@ if ($p) {
           <form method="post" class="mon">
             <input type="hidden" name="act" value="goi">
             <input type="hidden" name="dv" value="<?= (int)$m['id'] ?>">
+            <?php if (!empty($m['Hình ảnh'])): ?><img class="anh" src="anh_mon/<?= e($m['Hình ảnh']) ?>" alt="<?= e($m['ten']) ?>" loading="lazy"><?php endif; ?>
             <b><?= e($m['ten']) ?></b>
             <span><?= tien($m['gia']) ?> · <?= (int)$m['ton'] > 0 ? 'Còn ' . (int)$m['ton'] : 'Hết hàng' ?></span>
             <div class="sl">

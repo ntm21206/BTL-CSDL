@@ -82,7 +82,7 @@ $chon = null;
 foreach ($phiens as $p) { if ((int)$p['id'] === $sel) $chon = $p; }
 if (!$chon && $phiens) $chon = $phiens[0];
 
-$menu = $conn->query("SELECT `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
+$menu = $conn->query("SELECT *, `Mã dịch vụ` AS id, `Tên dịch vụ` AS ten, `Loại` AS loai, `Đơn giá` AS gia, `Số lượng tồn` AS ton FROM `dịch vụ` ORDER BY `Loại`, `Tên dịch vụ`")->fetch_all(MYSQLI_ASSOC);
 $nhom = [];
 foreach ($menu as $m) $nhom[$m['loai']][] = $m;
 
@@ -122,6 +122,7 @@ dau_trang('Gọi món', 'goi_mon');
         <input type="hidden" name="act" value="them">
         <input type="hidden" name="phien" value="<?= (int)$chon['id'] ?>">
         <input type="hidden" name="dv" value="<?= (int)$m['id'] ?>">
+        <?php if (!empty($m['Hình ảnh'])): ?><img class="anh" src="anh_mon/<?= e($m['Hình ảnh']) ?>" alt="<?= e($m['ten']) ?>" loading="lazy"><?php endif; ?>
         <b><?= e($m['ten']) ?></b>
         <span><?= tien($m['gia']) ?> · <?= (int)$m['ton'] > 0 ? 'Còn ' . (int)$m['ton'] : 'Hết hàng' ?></span>
         <div class="sl">
