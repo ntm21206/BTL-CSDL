@@ -178,7 +178,7 @@ dau_trang('Khách hàng & nạp tiền', 'khach_hang');
       <td><?= e($r['tk'] ?: '—') ?></td>
       <td><?= e($r['hang']) ?></td>
       <td class="r"><?= $r['tid'] ? tien($r['so_du']) : '—' ?></td>
-      <td class="r"><?php if ($r['tid']): ?><a class="btn b1 nho" href="khach_hang.php?tk=<?= (int)$r['tid'] ?>">Nạp tiền</a><?php endif; ?></td>
+      <td class="r"><?php if ($r['tid']): ?><a class="btn b1 nho" href="khach_hang.php?tk=<?= (int)$r['tid'] ?>">Chọn</a><?php endif; ?></td>
     </tr>
     <?php endforeach; ?>
     <?php if (!$ds): ?><tr><td colspan="6" class="muted">Không tìm thấy khách hàng.</td></tr><?php endif; ?>
